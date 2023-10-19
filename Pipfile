@@ -9,6 +9,7 @@ google = "*"
 google-api-core = "*"
 google-cloud-speech = "*"
 pyaudio = "*"
+websockets = "*"
 
 [dev-packages]
 
