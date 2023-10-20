@@ -1,8 +1,13 @@
 import asyncio
+import websockets
 from websockets.server import serve
 import json
 
-async def handle_client(websocket):
+CONNECTIONS = set()
+
+async def on_ws_message(websocket):
+    CONNECTIONS.add(websocket)
+
     async for message in websocket:
         try:
             data = json.loads(message)
@@ -24,7 +29,7 @@ async def handle_client(websocket):
                     
                     # Respond to the client if needed
                     response = {
-                        "status": "ok"
+                        "status": "connected"
                     }
                     await websocket.send(json.dumps(response))
                 else:
@@ -37,8 +42,12 @@ async def handle_client(websocket):
             # Handle invalid JSON
             pass
 
-async def main():
-    async with serve(handle_client, "localhost", 8765):
-        await asyncio.Future()  # run forever
+def broadcast_transcription(message):
+    websockets.broadcast(CONNECTIONS, message)
 
-asyncio.run(main())
+async def main():
+    server = await serve(on_ws_message, "localhost", 8765)
+    await server.wait_closed()
+
+if __name__ == "__main__":
+    asyncio.run(main())
