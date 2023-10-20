@@ -1,9 +1,8 @@
 import queue
-import sys
 import time
-
+import websocket
+import json
 from google.cloud import speech
-
 from audio_capture import AudioCapture
 
 STREAMING_LIMIT = 240000  # 4 minutes
@@ -56,7 +55,7 @@ class Transcription:
 
         # configures streaming settings for recognition
         streaming_config = speech.StreamingRecognitionConfig(
-            config=config, interim_results=False
+            config=config, interim_results=True
         )
 
         # instantiate the audio input stream. The input must be in 16-bit mono format
@@ -92,18 +91,24 @@ class Transcription:
                         continue
 
                     transcript = result.alternatives[0].transcript
+                    is_final = result.is_final
 
                     current_time = get_current_time()
 
-                    yield transcript, current_time
+                    yield transcript, is_final, current_time
 
 
 def main():
     print("\033[0;32m", "Transcription started, speak!\n\n Say 'exit' to stop the transcription.\n")
+
     with Transcription() as stream:
-        for transcript, transcript_time in stream.transcription_generator():
+        for transcript, is_final, transcript_time in stream.transcription_generator():
+            print()
+            websocket.broadcast_transcription(transcript, is_final)
+
             readable_time = time.strftime("%x %X")
-            print("\033[0;33m", str(readable_time) + " - " + transcript + "\n")
+            print(f"\033[0;33m {str(readable_time)} - {transcript} ({is_final})\n")
+
             if "exit" in transcript.strip().lower():
                 stream.closed = True
                 break

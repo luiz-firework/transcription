@@ -42,8 +42,16 @@ async def on_ws_message(websocket):
             # Handle invalid JSON
             pass
 
-def broadcast_transcription(message):
-    websockets.broadcast(CONNECTIONS, message)
+def broadcast_transcription(message, is_final):
+    payload = {
+        "message": message,
+        "is_final": is_final
+    }
+    websockets.broadcast(CONNECTIONS, json.dumps(payload))
+
+async def run_websocket_server():
+    server = await serve(on_ws_message, "localhost", 8765)
+    await server.wait_closed()
 
 async def main():
     server = await serve(on_ws_message, "localhost", 8765)
